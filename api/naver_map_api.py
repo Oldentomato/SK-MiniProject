@@ -33,10 +33,11 @@ def mapXY(input="동국대학교"):
         m_lat = data['addresses'][0]['y']
         # 경도
         m_lng = data['addresses'][0]['x']
-        
-        print(f'위도 = {m_lat}\n경도 = {m_lng}')
+    
+        return {
+            "위도" : m_lat,
+            "경도" : m_lng
+        }
         
     else:
         print(f'Error: {res.url}')
-
-mapXY()
