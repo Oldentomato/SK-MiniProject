@@ -1,4 +1,7 @@
-from data_preprocessing import DataPreProcessing, kindB, kindJ
+if __name__ == "__main__":
+    from data_preprocessing import DataPreProcessing, kindB, kindJ
+else:
+    from .data_preprocessing import DataPreProcessing, kindB, kindJ
 import xgboost as xgb
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
@@ -16,9 +19,9 @@ class TrainModel:
         plt.rc('font', family=font_prop)
 
         self.gridSearchDict = {
-            "n_estimators": [100,200,300],
+            "n_estimators": [200,300,400],
             "learning_rate": [0.05,0.1,0.2],
-            "max_depth": [3,5,10]
+            "max_depth": [5,10, 20]
         }
 
 
@@ -28,13 +31,22 @@ class TrainModel:
         self.y_test = y_test 
 
 
-    def train(self):
+    def trainGrid(self):
         model = xgb.XGBRegressor()
         grid = GridSearchCV(model, param_grid=self.gridSearchDict,scoring="r2",verbose=True)
         grid.fit(self.X_train, self.y_train)
 
         self.model = grid.best_estimator_
         print(f"최적의 파라미터: {grid.best_params_}")
+
+    def train(self):
+        model = xgb.XGBRegressor(
+            n_estimators= 400,
+            learning_rate= 0.1,
+            max_depth= 20
+        )
+        model.fit(self.X_train, self.y_train)
+
 
 
     def valid(self):
@@ -123,13 +135,13 @@ if __name__ == "__main__":
     modelTrain.train()
     modelTrain.valid()
     modelTrain.show_graph()
-    modelTrain.save_model("./ml_python/model/xbg_model.pkl")
+    modelTrain.save_model("./ml_python/model/xbg_model.pkl") 
 
-    result = TrainModel.inferenceModel("./ml_python/model/xbg_model.pkl",{
-        "자치구명": "영등포구",
-        "법정동명": "신도림동",
-        "층": 8,
-        "임대면적": 42.01,
-        "보증금(만원)": 100
-    })
-    print(f"예상 월 임대료:{result}만원")
+    # result = TrainModel.inferenceModel("./ml_python/model/xbg_model.pkl",{
+    #     "자치구명": "영등포구",
+    #     "법정동명": "신도림동",
+    #     "층": 7,
+    #     "임대면적": 27.01,
+    #     "보증금(만원)": 1000
+    # })
+    # print(f"예상 월 임대료:{result}만원 오차금액 +-20만원")
