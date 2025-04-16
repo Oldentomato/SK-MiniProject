@@ -113,7 +113,7 @@ class DataPreProcessing:
 
     def extract(self):
         self.df = self.df[self.df['전월세구분'] == '월세'] # 월세 데이터만 가져오기
-        self.df = self.df[self.df['임대료(만원)'] < 1000] # 정답 데이터의 이상치 제거 
+        self.df = self.df[self.df['임대료(만원)'] < 400] # 정답 데이터의 이상치 제거 
         self.df = self.df[self.usecolumns]
         print(self.df)
         self.__dataCheck()
