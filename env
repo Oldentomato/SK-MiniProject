@@ -1,0 +1,12 @@
+MAPS_URL="https://maps.apigw.ntruss.com/map-geocode/v2/geocode"
+
+NAVER_CLOUD_CLIENT="e8sk22z1c6"
+NAVER_CLOUD_SECRET="XrskvYRs1IgksCqC5oX6ASnabJdOEXGxzShD3DDr"
+
+
+USER_AGENT='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36'
+
+SEARCH_URL="https://openapi.naver.com/v1/search/local.json"
+
+NAVER_CLIENT_ID="3THFL15a4JGlhZ0qlgRY"
+NAVER_CLIENT_SECRET="Wtxg4YpxNM"
