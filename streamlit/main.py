@@ -149,13 +149,16 @@ def mainView():
 
         if selected not in st.session_state.inference_cache: #radio변경때만 model실행
             with st.spinner("상세 정보를 불러오는 중입니다..."):
-                result = TrainModel.inferenceModel("./ml_python/model/xbg_model.pkl",{
-                    "자치구명": "영등포구",
-                    "법정동명": "신도림동",
-                    "층": 7,
-                    "임대면적": 27.01,
-                    "보증금(만원)": 1000
+                res = requests.post("http://devtomato.synology.me:9904/api/model/getModelResult", json={
+                    "J": "영등포구",
+                    "B": "신도림동",
+                    "Floor": 7,
+                    "Area": 27.01,
+                    "securityMoney": 1000
                 })
+
+                if res.ok:
+                    result = res.json()["content"]
                 st.session_state.inference_cache[selected] = result
                 
         else:
