@@ -8,7 +8,8 @@ class ZigbangAPI:
     BASE_LIST_URL = "https://apis.zigbang.com/v2/items/{roomtype}"
     BASE_DETAIL_URL_V3 = "https://apis.zigbang.com/v3/items/{item_id}"
 
-    def __init__(self, lat_center: float, lng_center: float, room_type: str, delta: float = 0.003):
+    def __init__(self, lat_center: float, lng_center: float,
+                 room_type: str, delta: float = 0.003):
         self.lat_center = lat_center
         self.lng_center = lng_center
         self.delta = delta
@@ -74,7 +75,6 @@ class ZigbangAPI:
                 address_origin = item.get("addressOrigin", {})
 
                 detail = {
-                    "매물ID": item_id,
                     "사이트": "직방",
 
                     "시도": address_origin.get("local1"), # 행정구역
@@ -86,21 +86,17 @@ class ZigbangAPI:
                     "세부 URL": f"https://www.zigbang.com/home/{self.room_type}/items/{item_id}",
                     
                     "방식": item.get("salesType"),          
-                    "방_종류": item.get("roomType"), # ex. 원룸, 투룸
                     "건물 형식": item.get("serviceType"), # ex. 빌라
 
                     "보증금": price.get("deposit"),
                     "월세": price.get("rent"),
                     "관리비": manage_cost.get("amount"),
-                    "관리비 포함": ', '.join(manage_cost.get("includes", [])),
-                    "관리비 별도": ', '.join(manage_cost.get("notIncludes", [])),
 
                     "면적(m²)": area.get("전용면적M2"),
                     # 면적(평)
                     "임대면적": round(area.get("전용면적M2", 0) / 3.3058, 2),
                     
                     "층수": floor_info.get('floor'),
-                    "전체 층수": floor_info.get('allFloors')
                 }
                 details.append(detail)
 

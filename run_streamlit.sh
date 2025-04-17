@@ -1,3 +1,3 @@
-#!bin/bash 
+#!bin/bash
 
 streamlit run ./streamlit/main.py

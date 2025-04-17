@@ -38,7 +38,7 @@ def mapXY(input="동국대학교"):
         return {
             "시도": data['addresses'][0]["addressElements"][0]["longName"],
             '자치구명': data['addresses'][0]["addressElements"][1]["longName"],
-            '법정동명': data['addresses'][0]["addressElements"][2]["longName"],
+            '법적동명': data['addresses'][0]["addressElements"][2]["longName"],
             "위도" : m_lat,
             "경도" : m_lng
         }

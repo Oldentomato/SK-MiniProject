@@ -4,10 +4,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException # TimeoutException 임포트
+import os
+from dotenv import load_dotenv
 
 from urllib.parse import urljoin
 # 위도 경도
 from naver_api import naver_map_api as na
+
+load_dotenv()
 
 # 다방 base url
 dabang_url ="https://www.dabangapp.com/map/"
@@ -20,11 +24,6 @@ bang_dict = {
     "오피스텔" : "officetel"
 }
 
-# 크롬 옵션
-chrome_options = Options()
-chrome_options.add_argument('--headless')  # 화면 표시 없이 실행
-chrome_options.add_argument('--no-sandbox')
-chrome_options.add_argument('--disable-dev-shm-usage')
 
 def getDabangList(search_item, bang_type="원룸/투룸"):
     if bang_type not in bang_dict.keys():
@@ -37,6 +36,8 @@ def getDabangList(search_item, bang_type="원룸/투룸"):
 
     # 위도 경도 계산
     xy_info = na.mapXY(search_item)
+    if not xy_info or "위도" not in xy_info or "경도" not in xy_info:
+        return { "errorMessage": f"'{search_item}'에 대한 위치 정보를 찾을 수 없습니다." }
 
     # 쿼리
     query = "?m_lat={}&m_lng={}&m_zoom=18".format(xy_info["위도"], xy_info["경도"])
@@ -46,7 +47,7 @@ def getDabangList(search_item, bang_type="원룸/투룸"):
 
     print("요청 url : ", request_url)
 
-    driver = webdriver.Chrome(options=chrome_options)
+    driver = webdriver.Chrome()
 
     t_dict = {
         "원룸/투룸" : "onetwo-list",
@@ -89,10 +90,9 @@ def getDabangList(search_item, bang_type="원룸/투룸"):
             for index, li in enumerate(li_elements):
                 # 매물 한개 데이터
                 bang_info = {
-                    '사이트': '다방',
                     '시도': xy_info['시도'],
                     '자치구명': xy_info['자치구명'],
-                    '법정동명': xy_info['법정동명'],
+                    '법적동명': xy_info['법적동명'],
                 }
                 # li 에 있는 2개의 div 가져오기
                 div_elements = li.find_elements(By.TAG_NAME, "div")
@@ -101,7 +101,7 @@ def getDabangList(search_item, bang_type="원룸/투룸"):
                 img_element = li.find_element(By.CSS_SELECTOR, "img")
                 img_url = img_element.get_attribute('data-src')
                 
-                bang_info["이미지"] = img_url
+                bang_info["세부 URL"] = img_url
                 
                 if div_elements:                
                     # [ 월세, 보증금/월세, 방식, 층, 면적, 관리비, 안내사항 ]
@@ -120,13 +120,15 @@ def getDabangList(search_item, bang_type="원룸/투룸"):
                         bang_info["매매금"] = details[0].split(' ')[1]
                     
                     # 방 종류 ( 원룸, 투룸 등 )
-                    bang_info["방_종류"] = details[1]
+                    bang_info["건물 형식"] = details[1]
                     
                     # ( '2층, 19.82m², 관리비 5만' )
                     # 층수 
-                    bang_info["층"] = details[2].split(', ')[0].strip()
-                    # 임대면적 ( 26.44m² )
-                    bang_info["임대면적"] = details[2].split(', ')[1].split('m')[0].strip()
+                    bang_info["층수"] = details[2].split(', ')[0].strip()
+                    # 면적 ( 26.44m² )
+                    bang_info["면적(m²)"] = details[2].split(', ')[1].split('m')[0].strip()
+                    # 임대면적
+                    bang_info["임대면적"] = round( float(details[2].split(', ')[1].split('m')[0].strip()) / 3.3058, 2)
                     # 관리비
                     bang_info["관리비"] = details[2].split(', ')[2].split(' ')[1].replace('만', '')
                     

@@ -11,7 +11,7 @@ import pandas as pd
 from naver_api import naver_map_api as na
 
 from dabang_web_scrap import getDabangList
-from zigbang import ZigbangAPI
+from zigbang import ZigbangAPI, ZigbangDataProcessor
 
 # [ '사이트', '시도', '자치구명', '법적동명', '세부 URL', '방식', '건물 형식', '보증금', '월세', '관리비', '전세금', '면적', '임대면적', '층수' ]
 
@@ -56,6 +56,7 @@ def getDabangDataFrame(address):
             print(f"다방 {bang_type} 오류 발생: {e}")
 
     return dabang_list
+    
 
 sample_data = [
     {"name": "장소 1", "lat": 37.5665, "lon": 126.9780, "detail": "장소 1의 상세 설명입니다."},
@@ -148,16 +149,13 @@ def mainView():
 
         if selected not in st.session_state.inference_cache: #radio변경때만 model실행
             with st.spinner("상세 정보를 불러오는 중입니다..."):
-                res = requests.post("http://devtomato.synology.me:9904/api/model/getModelResult", json={
-                    "J": "영등포구",
-                    "B": "신도림동",
-                    "Floor": 7,
-                    "Area": 27.01,
-                    "securityMoney": 1000
+                result = TrainModel.inferenceModel("./ml_python/model/xbg_model.pkl",{
+                    "자치구명": "영등포구",
+                    "법정동명": "신도림동",
+                    "층": 7,
+                    "임대면적": 27.01,
+                    "보증금(만원)": 1000
                 })
-
-                if res.ok:
-                    result = res.json()["content"]
                 st.session_state.inference_cache[selected] = result
                 
         else:
@@ -173,8 +171,6 @@ def mainView():
         st.markdown(f"예상 월 임대료:{result}만원 오차금액 +-20만원")
         st.subheader("상세 정보")
         st.write(selected_detail)
-
-
 
 
 if __name__ == "__main__":
