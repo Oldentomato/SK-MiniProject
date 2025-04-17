@@ -29,7 +29,6 @@ def mapXY(input="동국대학교"):
     if res.ok:        
         # 데이터 출력
         data = res.json()
-        print(data)
         
         # 위도
         m_lat = data['addresses'][0]['y']
