@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException # TimeoutException 임포트
 
 from urllib.parse import urljoin
@@ -19,28 +20,33 @@ bang_dict = {
     "오피스텔" : "officetel"
 }
 
-def getDabangList(bang_type="원룸/투룸"):
+# 크롬 옵션
+chrome_options = Options()
+chrome_options.add_argument('--headless')  # 화면 표시 없이 실행
+chrome_options.add_argument('--no-sandbox')
+chrome_options.add_argument('--disable-dev-shm-usage')
+
+def getDabangList(search_item, bang_type="원룸/투룸"):
     if bang_type not in bang_dict.keys():
         return {
             "errorMessage": "방 형식이 올바르지 않습니다."
         }
     
     # 최종 url
-    search_url = urljoin(dabang_url, bang_dict[bang_type])
+    request_url = urljoin(dabang_url, bang_dict[bang_type])
 
     # 위도 경도 계산
-    xy_info = na.mapXY()
+    xy_info = na.mapXY(search_item)
 
-    print(xy_info)
-
-
+    # 쿼리
     query = "?m_lat={}&m_lng={}&m_zoom=18".format(xy_info["위도"], xy_info["경도"])
 
-    search_url = urljoin(search_url, query)
+    # 요청 url
+    request_url = urljoin(request_url, query)
 
-    print("요청 url : ", search_url)
+    print("요청 url : ", request_url)
 
-    driver = webdriver.Chrome()
+    driver = webdriver.Chrome(options=chrome_options)
 
     t_dict = {
         "원룸/투룸" : "onetwo-list",
@@ -49,7 +55,7 @@ def getDabangList(bang_type="원룸/투룸"):
         "오피스텔" : "officetel-list"
     }
 
-    driver.get(search_url)
+    driver.get(request_url)
 
     # 찾으려는 요소의 CSS 선택자
     div_selector = f"div#{t_dict[bang_type]} > div"
@@ -57,7 +63,6 @@ def getDabangList(bang_type="원룸/투룸"):
     ul_wait_timeout = 3     # ul 요소 대기 시간
 
     try:
-        print(f"{div_selector} 대기중...")
 
         # WebDriverWait 객체 생성
         wait = WebDriverWait(driver, wait_timeout)
@@ -84,6 +89,7 @@ def getDabangList(bang_type="원룸/투룸"):
             for index, li in enumerate(li_elements):
                 # 매물 한개 데이터
                 bang_info = {
+                    '사이트': '다방',
                     '시도': xy_info['시도'],
                     '자치구명': xy_info['자치구명'],
                     '법정동명': xy_info['법정동명'],
@@ -122,7 +128,7 @@ def getDabangList(bang_type="원룸/투룸"):
                     # 임대면적 ( 26.44m² )
                     bang_info["임대면적"] = details[2].split(', ')[1].split('m')[0].strip()
                     # 관리비
-                    bang_info["관리비"] = details[2].split(', ')[2].split(' ')[1]
+                    bang_info["관리비"] = details[2].split(', ')[2].split(' ')[1].replace('만', '')
                     
                 bang_list.append(bang_info) 
         
@@ -140,3 +146,10 @@ def getDabangList(bang_type="원룸/투룸"):
         }
     finally:
         driver.quit()
+        
+def main():
+    rst = getDabangList("동국대")
+    print(rst)
+
+if __name__ == "__main__":
+    main()
