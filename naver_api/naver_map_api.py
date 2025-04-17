@@ -2,6 +2,7 @@ import requests
 import os
 from dotenv import load_dotenv
 from . import naver_search_api as na
+# import naver_search_api as na
 
 load_dotenv()
 
@@ -28,6 +29,7 @@ def mapXY(input="동국대학교"):
     if res.ok:        
         # 데이터 출력
         data = res.json()
+        print(data)
         
         # 위도
         m_lat = data['addresses'][0]['y']
@@ -35,6 +37,9 @@ def mapXY(input="동국대학교"):
         m_lng = data['addresses'][0]['x']
     
         return {
+            "시도": data['addresses'][0]["addressElements"][0]["longName"],
+            '자치구명': data['addresses'][0]["addressElements"][1]["longName"],
+            '법정동명': data['addresses'][0]["addressElements"][2]["longName"],
             "위도" : m_lat,
             "경도" : m_lng
         }
