@@ -21,7 +21,7 @@ class TrainModel:
         self.gridSearchDict = {
             "n_estimators": [200,300,400],
             "learning_rate": [0.05,0.1,0.2],
-            "max_depth": [5,10, 20]
+            "max_depth": [5,10] #20은 너무 오래걸림
         }
 
 
@@ -33,19 +33,19 @@ class TrainModel:
 
     def trainGrid(self):
         model = xgb.XGBRegressor()
-        grid = GridSearchCV(model, param_grid=self.gridSearchDict,scoring="r2",verbose=True)
+        grid = GridSearchCV(model, param_grid=self.gridSearchDict,scoring="r2", n_jobs=-1, verbose=2) #n_jobs=-1 : 모든 코어 사용
         grid.fit(self.X_train, self.y_train)
 
         self.model = grid.best_estimator_
         print(f"최적의 파라미터: {grid.best_params_}")
 
     def train(self):
-        model = xgb.XGBRegressor(
+        self.model = xgb.XGBRegressor(
             n_estimators= 400,
             learning_rate= 0.1,
-            max_depth= 20
+            max_depth= 10
         )
-        model.fit(self.X_train, self.y_train)
+        self.model.fit(self.X_train, self.y_train)
 
 
 
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     modelTrain.train()
     modelTrain.valid()
     modelTrain.show_graph()
-    modelTrain.save_model("./ml_python/model/xbg_model.pkl") 
+    modelTrain.save_model("./ml_python/model/xgb_model2.pkl") 
 
     # result = TrainModel.inferenceModel("./ml_python/model/xbg_model.pkl",{
     #     "자치구명": "영등포구",

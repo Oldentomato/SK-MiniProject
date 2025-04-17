@@ -75,21 +75,30 @@ class DataPreProcessing:
         return df
     
 
-    def __checkYData(self, df):
+    def __checkYData(self, df, mode="scatter"):
         font_path = 'C:\\windows\\Fonts\\malgun.ttf'
         #font의 파일정보로 font name 을 알아내기
         font_prop = fm.FontProperties(fname=font_path).get_name()
         plt.rc('font', family=font_prop)
 
-        plt.figure(figsize=(12, 6))
-        plt.scatter(df.index, df["임대료(만원)"], alpha=0.4, color='dodgerblue')
+        if mode == "scatter":
+            plt.figure(figsize=(12, 6))
+            plt.scatter(df.index, df["임대료(만원)"], alpha=0.4, color='dodgerblue')
 
-        plt.title("정답 데이터 (임대료) 분포 - Scatter Plot")
-        plt.xlabel("데이터 인덱스")
-        plt.ylabel("임대료 (만원)")
-        plt.grid(True)
-        plt.tight_layout()
-        plt.savefig("./ml_python/graph/정답데이터이상치(정상화).png")
+            plt.title("정답 데이터 (임대료) 분포 - Scatter Plot")
+            plt.xlabel("데이터 인덱스")
+            plt.ylabel("임대료 (만원)")
+            plt.grid(True)
+            plt.tight_layout()
+            plt.savefig("./ml_python/graph/정답데이터이상치(정상화)2.png")
+        elif mode == "boxplot":
+            plt.figure(figsize=(12, 6))
+            plt.boxplot(df["임대료(만원)"])
+            plt.ylabel("임대료 범위")
+            plt.savefig("./ml_python/graph/정답데이터boxplot.png")
+        else:
+            raise Exception("wrong mode name")
+
         # plt.show()
 
     
@@ -113,7 +122,12 @@ class DataPreProcessing:
 
     def extract(self):
         self.df = self.df[self.df['전월세구분'] == '월세'] # 월세 데이터만 가져오기
-        self.df = self.df[self.df['임대료(만원)'] < 400] # 정답 데이터의 이상치 제거 
+        # self.df = self.df[self.df['임대료(만원)'] < 400] # 정답 데이터의 이상치 제거 
+        # 신뢰도 95% 기준 이상치 Index 추출
+        outlier = self.df[(abs((self.df['임대료(만원)']-self.df['임대료(만원)'].mean())/self.df['임대료(만원)'].std()))>1.96].index
+        # 추출한 인덱스의 행을 삭제하여 clean_df 생성
+        self.df = self.df.drop(outlier)
+
         self.df = self.df[self.usecolumns]
         print(self.df)
         self.__dataCheck()
@@ -125,7 +139,7 @@ class DataPreProcessing:
         print(X_train)
         print(y_train)
 
-        self.__checkYData(y_train)
+        # self.__checkYData(y_train,mode="boxplot")
 
 
         return X_train, X_test, y_train, y_test
@@ -134,6 +148,6 @@ class DataPreProcessing:
 
 
 if __name__ == "__main__":
-    data = DataPreProcessing("./trainData/seoulData.csv")
+    data = DataPreProcessing("./ml_python/trainData/seoulData.csv")
 
     data.extract()
