@@ -4,7 +4,7 @@ from streamlit_folium import st_folium
 import sys, os
 import requests
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-from ml_python.train import TrainModel
+import numpy as np
 
 import pandas as pd
 # 주소 정보 받아오기
@@ -14,6 +14,46 @@ from dabang_web_scrap import getDabangList
 from zigbang import ZigbangAPI, ZigbangDataProcessor
 
 # [ '사이트', '시도', '자치구명', '법적동명', '세부 URL', '방식', '건물 형식', '보증금', '월세', '관리비', '전세금', '면적', '임대면적', '층수' ]
+
+# 층수 문자열 int로 치환
+def floorFormat(s):
+    result = 0
+    if s == "고":
+        result = 10
+    elif s == "중":
+        result = 5
+    elif s == "저":
+        result = 3 
+    else:
+        result = int(s)
+
+    return result 
+
+# 한글 금액에서 숫자로 치환하는 함수
+def korean_money_to_int(s):
+    if s == np.nan:
+        raise Exception("금액 누락")
+    if type(s) == int:
+        return s
+    s = s.replace(" ", "").replace(",", "").replace("원", "")
+
+    result = 0
+    units = {"억": 100000000, "천만": 10000000, "백만": 1000000, "만": 10000, "천": 1000, "백": 100}
+    last_pos = 0
+    for unit, value in units.items():
+        if unit in s:
+            parts = s.split(unit)
+            num = parts[0][last_pos:]
+            num = int(num) if num else 1
+            result += num * value
+            s = parts[1]
+            last_pos = 0
+
+    # 만약 나머지가 숫자라면 더하기
+    if s.isdigit():
+        result += int(s)
+
+    return result
 
 # 직방 df 받아오기
 def getSaleList(lat: float, lon: float):
@@ -58,36 +98,35 @@ def getDabangDataFrame(address):
     return dabang_list
     
 
-sample_data = [
-    {"name": "장소 1", "lat": 37.5665, "lon": 126.9780, "detail": "장소 1의 상세 설명입니다."},
-    {"name": "장소 2", "lat": 37.5651, "lon": 126.9895, "detail": "장소 2의 상세 설명입니다."},
-    {"name": "장소 3", "lat": 37.5700, "lon": 126.9825, "detail": "장소 3의 상세 설명입니다."}
-]
-
-st.session_state.select_list = sample_data
 
 def mainView():
 
     st.title("부동산 매물 검색기")
 
-    if "search_clicked" not in st.session_state:
-        st.session_state.search_clicked = False
+        #centroid
+    lat, lon = 37.5665, 126.9780
+
+
     if "selected_place" not in st.session_state:
         st.session_state.selected_place = None
+
+    if "searchTrigger" not in st.session_state:
+        st.session_state.searchTrigger = False
+
+    if "saveAddress" not in st.session_state:
+        st.session_state.saveAddress = None
+
+    if "saleList" not in st.session_state:
+        st.session_state.saleList = []
+
 
     address = st.text_input("주소를 입력하세요:")
 
     if st.button("검색"):
-        st.session_state.search_clicked = True
         st.session_state.selected_place = None  # 검색하면 선택 초기화
+        st.session_state.searchTrigger = True if address != st.session_state.saveAddress else False #버튼을 클릭하는 순간에 저장된 검색어와 현재 검색어를 비교하고 다르면 트리거발생시킴
 
-    if st.session_state.search_clicked:
-        ######################################
-        # 주소 입력 시 위,경도 추출 함수 작성
-        # with st.spinner("상세 정보를 불러오는 중입니다..."):
-        #     ex) lat, lon = getCoordinate(address)
-        ######################################
-        
+    if st.session_state.searchTrigger:
         with st.spinner("상세 정보를 불러오는 중입니다..."):
             # 좌표 데이터
             xy_data = na.mapXY(address)
@@ -106,74 +145,80 @@ def mainView():
             # 두 데이터프레임 합치기
             combined_df = pd.concat([zigbang_df, dabang_df], ignore_index=True)
 
+            st.session_state.saleList = combined_df.to_dict(orient="records")
+
+            st.session_state.saveAddress = address #저장할 검색어 갱신
+            st.session_state.searchTrigger = False #트리거 종료
+
             st.subheader("통합 매물 리스트")
             st.dataframe(combined_df)
         
-        #debug
-        lat, lon = 37.5665, 126.9780
 
-        ######################################
-        # 위,경도 얻을 시, 크롤링으로 부동산 매물 리스트 받아오는 함수 작성
-        # with st.spinner("상세 정보를 불러오는 중입니다..."):
-        #     ex) saleList = getSaleList(lat,lon)
-        # sample_data를 리스트변수로 변경할것
-        ######################################
-
+    if st.session_state.saleList:
         col1, col2 = st.columns([2, 1])
 
-        with col1:
-            m = folium.Map(location=[lat, lon], zoom_start=14)
-            for item in sample_data:
-                folium.Marker(
-                    location=[item["lat"], item["lon"]],
-                    popup=item["name"],
-                    icon=folium.Icon(color='blue',icon='star')
-                ).add_to(m)
-            st_folium(m, width=700, height=500)
+        # with col1:
+        #     m = folium.Map(location=[lat, lon], zoom_start=14)
+        #     for item in xy_data:
+        #         folium.Marker(
+        #             location=[item["위도"], item["경도"]],
+        #             popup=item["name"],
+        #             icon=folium.Icon(color='blue',icon='star')
+        #         ).add_to(m)
+        #     st_folium(m, width=700, height=500)
 
         with col2:
             st.subheader("장소 리스트")
             selected = st.radio(
                 "항목을 선택하세요",
-                [item["name"] for item in st.session_state.select_list]
+                st.session_state.saleList,
+                format_func=lambda x: x["지번주소"]
             )
+            print(selected)
+            print({
+                    "J": selected.get("자치구명"),
+                    "B": selected.get("법적동명"),
+                    "Floor": floorFormat(selected.get("층수")),
+                    "Area": selected.get("면적(m²)"),
+                    "securityMoney": korean_money_to_int(selected.get("보증금"))
+                })
             
-            ######################################
-            # 장소 선택 시, 자치구,법정동,층,임대면적.보증금 정보가져오는 함수 작성
-            #     ex) saleInfo = getSaleInfo(name)
-            ######################################
-            st.session_state.selected_place = selected #화면 나오기 전에 미리 데이터를 가져오고 state를 변경
+            st.session_state.selected_place = selected.get("지번주소") #화면 나오기 전에 미리 데이터를 가져오고 state를 변경
 
         if "inference_cache" not in st.session_state: #folium 등으로 이벤트발생시 모델중복실행을 방지하기위해 캐시저장 dict선언
             st.session_state.inference_cache = {}
 
-        if selected not in st.session_state.inference_cache: #radio변경때만 model실행
+        if st.session_state.selected_place not in st.session_state.inference_cache: #radio변경때만 model실행
             with st.spinner("상세 정보를 불러오는 중입니다..."):
-                res = requests.post("http://devtomato.synology.me:9904/api/model/getModelResult", json={
-                    "J": "영등포구",
-                    "B": "신도림동",
-                    "Floor": 7,
-                    "Area": 27.01,
-                    "securityMoney": 1000
-                })
+                try:
+                    res = requests.post("http://devtomato.synology.me:9904/api/model/getModelResult", json={
+                        "J": selected.get("자치구명"),
+                        "B": selected.get("법적동명"),
+                        "Floor": floorFormat(selected.get("층수")),
+                        "Area": selected.get("면적(m²)"),
+                        "securityMoney": korean_money_to_int(selected.get("보증금"))
+                    })
 
-                if res.ok:
-                    result = res.json()["content"]
-                st.session_state.inference_cache[selected] = result
+                    if res.ok:
+                        result = res.json()["content"]
+                        st.session_state.inference_cache[st.session_state.selected_place] = result
+                except Exception as e:
+                    print(f"Error: {e}")
+                    result = "예측불가"
                 
         else:
-            result = st.session_state.inference_cache[selected]
+            result = st.session_state.inference_cache[st.session_state.selected_place]
 
-        selected = st.session_state.selected_place
 
         
-        selected_detail = next(
-            (item["detail"] for item in sample_data if item["name"] == st.session_state.selected_place), ""
-        )
+        # selected_detail = next(
+        #     (item["detail"] for item in sample_data if item["name"] == st.session_state.selected_place), ""
+        # )
         st.markdown("---")
-        st.markdown(f"예상 월 임대료:{result}만원 오차금액 +-20만원")
+        st.markdown(f"예상 월 임대료:{result}만원" if result !="예측불가" else result)
         st.subheader("상세 정보")
-        st.write(selected_detail)
+        st.write(st.session_state.selected_place)
+        # st.write(selected_detail)
 
 
 if __name__ == "__main__":
