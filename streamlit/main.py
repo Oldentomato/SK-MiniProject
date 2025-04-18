@@ -24,6 +24,8 @@ def floorFormat(s):
         result = 5
     elif s == "저":
         result = 3 
+    elif "층" in s:
+        return int(s[:-1])
     else:
         result = int(s)
 
@@ -81,19 +83,18 @@ def getSaleList(lat: float, lon: float):
     return all_dfs
             
 
-def getDabangDataFrame(address):
-    bang_type_list = ["원룸/투룸", "아파트", "주택빌라", "오피스텔"]
+def getDabangDataFrame(address, bang_type):
+    # bang_type_list = ["원룸/투룸", "아파트", "주택빌라", "오피스텔"]
     dabang_list = []
 
-    for bang_type in bang_type_list:
-        try:
-            bang_list = getDabangList(address, bang_type)
-            if isinstance(bang_list, dict) and "errorMessage" in bang_list:
-                print(f"오류 발생: {bang_list['errorMessage']}")
-            elif bang_list:
-                dabang_list.extend(bang_list)
-        except Exception as e:
-            print(f"다방 {bang_type} 오류 발생: {e}")
+    try:
+        bang_list = getDabangList(address, bang_type)
+        if isinstance(bang_list, dict) and "errorMessage" in bang_list:
+            print(f"오류 발생: {bang_list['errorMessage']}")
+        elif bang_list:
+            dabang_list.extend(bang_list)
+    except Exception as e:
+        print(f"다방 {bang_type} 오류 발생: {e}")
 
     return dabang_list
     
@@ -119,12 +120,20 @@ def mainView():
     if "saleList" not in st.session_state:
         st.session_state.saleList = []
 
+    if "selectedType" not in st.session_state:
+        st.session_state.selectedType = None
+
 
     address = st.text_input("주소를 입력하세요:")
 
+    options = ["원룸/투룸", "아파트", "주택빌라", "오피스텔"]
+
+    # 드롭다운 만들기
+    selected_option = st.selectbox('방 종류를 선택하세요:', options)
+
     if st.button("검색"):
         st.session_state.selected_place = None  # 검색하면 선택 초기화
-        st.session_state.searchTrigger = True if address != st.session_state.saveAddress else False #버튼을 클릭하는 순간에 저장된 검색어와 현재 검색어를 비교하고 다르면 트리거발생시킴
+        st.session_state.searchTrigger = True if address != st.session_state.saveAddress or selected_option != st.session_state.selectedType else False #버튼을 클릭하는 순간에 저장된 검색어와 현재 검색어를 비교하고 다르면 트리거발생시킴
 
     if st.session_state.searchTrigger:
         with st.spinner("상세 정보를 불러오는 중입니다..."):
@@ -132,7 +141,7 @@ def mainView():
             xy_data = na.mapXY(address)
             
             zigbang_list = getSaleList(float(xy_data["위도"]), float(xy_data["경도"]))
-            dabang_list = getDabangDataFrame(address)
+            dabang_list = getDabangDataFrame(address, selected_option)
 
             # 직방 리스트를 DataFrame으로 변환
             zigbang_df = pd.concat(zigbang_list, ignore_index=True) if zigbang_list else pd.DataFrame()
@@ -167,7 +176,7 @@ def mainView():
         #         ).add_to(m)
         #     st_folium(m, width=700, height=500)
 
-        with col2:
+        with col1:
             st.subheader("장소 리스트")
             selected = st.radio(
                 "항목을 선택하세요",
@@ -210,15 +219,15 @@ def mainView():
             result = st.session_state.inference_cache[st.session_state.selected_place]
 
 
-        
-        # selected_detail = next(
-        #     (item["detail"] for item in sample_data if item["name"] == st.session_state.selected_place), ""
-        # )
-        st.markdown("---")
-        st.markdown(f"예상 월 임대료:{result}만원" if result !="예측불가" else result)
-        st.subheader("상세 정보")
-        st.write(st.session_state.selected_place)
-        # st.write(selected_detail)
+        with col2:
+            # selected_detail = next(
+            #     (item["detail"] for item in sample_data if item["name"] == st.session_state.selected_place), ""
+            # )
+            st.markdown("---")
+            st.markdown(f"예상 월 임대료:{result}만원" if result !="예측불가" else result)
+            st.subheader("상세 정보")
+            st.write(st.session_state.selected_place)
+            # st.write(selected_detail)
 
 
 if __name__ == "__main__":
