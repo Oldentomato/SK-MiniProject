@@ -56,7 +56,7 @@ class ZigbangAPI:
             params = {"version": "", "domain": "zigbang"}
             try:
                 response = requests.get(url, params=params)
-                print(f"[{self.room_type}] 개별 매물 상세 요청 URL: {response.url}")
+                # print(f"[{self.room_type}] 개별 매물 상세 요청 URL: {response.url}")
                 response.raise_for_status()
             except requests.RequestException as e:
                 print(f"매물 ID {item_id} 요청 실패: {e}")
