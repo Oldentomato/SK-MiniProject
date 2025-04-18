@@ -13,23 +13,20 @@ from naver_api import naver_map_api as na
 from dabang_web_scrap import getDabangList
 from zigbang import ZigbangAPI, ZigbangDataProcessor
 
-# [ '사이트', '시도', '자치구명', '법적동명', '세부 URL', '방식', '건물 형식', '보증금', '월세', '관리비', '전세금', '면적', '임대면적', '층수' ]
+from module import getData
 
 # 층수 문자열 int로 치환
 def floorFormat(s):
-    result = 0
     if s == "고":
-        result = 10
+        return 10
     elif s == "중":
-        result = 5
+        return 5
     elif s == "저":
-        result = 3 
+        return 3 
     else:
         if "층" in s:
             return int(s.replace("층", ""))
-        result = int(s)
-
-    return result 
+        return int(s) 
 
 # 한글 금액에서 숫자로 치환하는 함수
 def korean_money_to_int(s):
@@ -57,56 +54,10 @@ def korean_money_to_int(s):
 
     return result
 
-# 직방 df 받아오기
-def getSaleList(lat: float, lon: float):
-    all_dfs = []
-    zigbang_types = ['villa', 'oneroom', 'officetel']
-
-    for room in zigbang_types:
-        api = ZigbangAPI(lat, lon, room_type=room, delta=0.005)
-        item_ids = api.get_item_ids()
-        details = api.get_item_details_v3(item_ids)
-        # 보증금 값 통일
-        for detail in details:
-            if int(detail["보증금"]) >= 10000:
-                eok = detail["보증금"] // 10000
-                man = detail["보증금"] % 10000
-                if man == 0:
-                    result = f"{eok}억"
-                else:
-                    result = f"{eok}억{man}"
-                detail["보증금"] = result
-        # details를 DataFrame으로 변환 후 all_dfs에 추가
-        df = pd.DataFrame(details)
-        all_dfs.append(df)
-
-    return all_dfs
-            
-
-def getDabangDataFrame(address, bang_type):
-    # bang_type_list = ["원룸/투룸", "아파트", "주택빌라", "오피스텔"]
-    dabang_list = []
-
-    try:
-        bang_list = getDabangList(address, bang_type)
-        if isinstance(bang_list, dict) and "errorMessage" in bang_list:
-            print(f"오류 발생: {bang_list['errorMessage']}")
-        elif bang_list:
-            dabang_list.extend(bang_list)
-    except Exception as e:
-        print(f"다방 {bang_type} 오류 발생: {e}")
-
-    return dabang_list
-    
-
 
 def mainView():
 
     st.title("부동산 매물 검색기")
-
-        #centroid
-    lat, lon = 37.5665, 126.9780
-
 
     if "selected_place" not in st.session_state:
         st.session_state.selected_place = None
@@ -137,22 +88,10 @@ def mainView():
 
     if st.session_state.searchTrigger:
         with st.spinner("상세 정보를 불러오는 중입니다..."):
-            # 좌표 데이터
-            xy_data = na.mapXY(address)
             
-            zigbang_list = getSaleList(float(xy_data["위도"]), float(xy_data["경도"]))
-            dabang_list = getDabangDataFrame(address, selected_option)
-
-            # 직방 리스트를 DataFrame으로 변환
-            zigbang_df = pd.concat(zigbang_list, ignore_index=True) if zigbang_list else pd.DataFrame()
-
-            # 다방 리스트를 DataFrame으로 변환
-            dabang_df = pd.DataFrame(dabang_list) if dabang_list else pd.DataFrame()
-            if not dabang_df.empty:
-                dabang_df.insert(0, "사이트", "다방")
-
             # 두 데이터프레임 합치기
-            combined_df = pd.concat([zigbang_df, dabang_df], ignore_index=True)
+            combined_df = getData.getCombinedDataFrame(address=address, option=selected_option)
+            combined_df = combined_df.fillna("없음")
 
             st.session_state.saleList = combined_df.to_dict(orient="records")
 

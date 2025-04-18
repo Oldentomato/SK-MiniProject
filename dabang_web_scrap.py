@@ -186,7 +186,7 @@ def getDabangList(search_item, bang_type="원룸/투룸"):
                         if len(details) > 2:
                             spec_parts = details[2].split(',')
                             if len(spec_parts) > 0:
-                                bang_info["층수"] = spec_parts[0].strip()
+                                bang_info["층수"] = spec_parts[0].replace('층', '').strip()
                             if len(spec_parts) > 1:
                                 area_part = spec_parts[1].split('m²')[0].strip()
                                 bang_info["면적(m²)"] = area_part
