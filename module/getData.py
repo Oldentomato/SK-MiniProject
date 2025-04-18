@@ -1,4 +1,3 @@
-from streamlit_folium import st_folium
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
@@ -72,3 +71,11 @@ def getCombinedDataFrame(address, option):
     # 두 데이터프레임 합치기
     combined_df = pd.concat([zigbang_df, dabang_df], ignore_index=True)
     return combined_df
+
+
+def main():
+    df = getCombinedDataFrame("동국대", "원룸/투룸")
+    print(df.keys())
+
+if __name__ == "__main__":
+    main()
