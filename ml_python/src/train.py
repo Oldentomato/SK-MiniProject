@@ -13,11 +13,6 @@ import joblib
 
 class TrainModel:
     def __init__(self,X_train, X_test, y_train, y_test):
-        font_path = 'C:\\windows\\Fonts\\malgun.ttf'
-        #font의 파일정보로 font name 을 알아내기
-        font_prop = fm.FontProperties(fname=font_path).get_name()
-        plt.rc('font', family=font_prop)
-
         self.gridSearchDict = {
             "n_estimators": [200,300,400],
             "learning_rate": [0.05,0.1,0.2],
@@ -63,13 +58,14 @@ class TrainModel:
         print(f"R2   : {r2:.4f}") # 결정계수 예측 값의 분산 비율 (1에 가까울 수록 좋음)
 
     @staticmethod
-    def inferenceModel(modelPath, xData):
+    def inferenceModel(xData, modelPath="", model=None):
         def checkType(var, checkType):
             if type(var) == checkType:
                 return True 
             else:
                 return False 
-        model = joblib.load(modelPath)
+        if model == None:
+            model = joblib.load(modelPath)
 
         xArr = []
         if (indexNum := kindJ.index(xData.get("자치구명"))) == False:
@@ -123,19 +119,19 @@ class TrainModel:
         plt.grid(True)
         plt.tight_layout()
         # plt.show()
-        plt.savefig("./ml_python/graph/실예측비교도.png")
+        plt.savefig("./graph/실예측비교도.png")
 
 
 if __name__ == "__main__":
-    dataProcessing = DataPreProcessing("./ml_python/trainData/seoulData.csv")
+    dataProcessing = DataPreProcessing("./data/seoulData.csv")
     X_train, X_test, y_train, y_test = dataProcessing.extract()
     modelTrain = TrainModel(X_train, X_test, y_train, y_test)
 
     
     modelTrain.train()
     modelTrain.valid()
-    modelTrain.show_graph()
-    modelTrain.save_model("./ml_python/model/xgb_model2.pkl") 
+    # modelTrain.show_graph()
+    modelTrain.save_model("./model/xgb_model.pkl") 
 
     # result = TrainModel.inferenceModel("./ml_python/model/xbg_model.pkl",{
     #     "자치구명": "영등포구",
