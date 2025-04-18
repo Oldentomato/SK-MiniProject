@@ -3,6 +3,7 @@ import folium
 from streamlit_folium import st_folium
 import sys, os
 import requests
+from geopy.geocoders import Nominatim
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import numpy as np
 
@@ -10,10 +11,10 @@ import pandas as pd
 # 주소 정보 받아오기
 from naver_api import naver_map_api as na
 
-from dabang_web_scrap import getDabangList
-from zigbang import ZigbangAPI, ZigbangDataProcessor
-
 from module import getData
+
+geolocator = Nominatim(user_agent="streamlit_map_app")
+st.set_page_config(layout="wide")
 
 # 층수 문자열 int로 치환
 def floorFormat(s):
@@ -103,17 +104,7 @@ def mainView():
         
 
     if st.session_state.saleList:
-        col1, col2 = st.columns([2, 1])
-
-        # with col1:
-        #     m = folium.Map(location=[lat, lon], zoom_start=14)
-        #     for item in xy_data:
-        #         folium.Marker(
-        #             location=[item["위도"], item["경도"]],
-        #             popup=item["name"],
-        #             icon=folium.Icon(color='blue',icon='star')
-        #         ).add_to(m)
-        #     st_folium(m, width=700, height=500)
+        col1, col2 = st.columns([2, 4])
 
         with col1:
             st.subheader("장소 리스트")
@@ -122,14 +113,14 @@ def mainView():
                 st.session_state.saleList,
                 format_func=lambda x: x["지번주소"]
             )
-            print(selected)
-            print({
-                    "J": selected.get("자치구명"),
-                    "B": selected.get("법적동명"),
-                    "Floor": floorFormat(selected.get("층수")),
-                    "Area": selected.get("면적(m²)"),
-                    "securityMoney": korean_money_to_int(selected.get("보증금"))
-                })
+            # print(selected)
+            # print({
+            #         "J": selected.get("자치구명"),
+            #         "B": selected.get("법적동명"),
+            #         "Floor": floorFormat(selected.get("층수")),
+            #         "Area": selected.get("면적(m²)"),
+            #         "securityMoney": korean_money_to_int(selected.get("보증금"))
+            #     })
             
             st.session_state.selected_place = selected.get("지번주소") #화면 나오기 전에 미리 데이터를 가져오고 state를 변경
 
@@ -157,16 +148,32 @@ def mainView():
         else:
             result = st.session_state.inference_cache[st.session_state.selected_place]
 
-
         with col2:
-            # selected_detail = next(
-            #     (item["detail"] for item in sample_data if item["name"] == st.session_state.selected_place), ""
-            # )
             st.markdown("---")
-            st.markdown(f"예상 월 임대료:{result}만원" if result !="예측불가" else result)
+            
             st.subheader("상세 정보")
+            st.markdown(f"예상 월 임대료:{result}만원" if result !="예측불가" else result)
             st.write(st.session_state.selected_place)
+            st.write(f"층수: {selected.get('층수')}")
+            st.write(f"면적: {selected.get('면적(m²)')}")
             # st.write(selected_detail)
+
+            #지명 선택 시 지도에 마커 표시
+            with st.spinner("지도 정보를 불러오는 중입니다..."):
+                location = geolocator.geocode(st.session_state.selected_place)
+
+                if location:
+                    print(st.session_state.selected_place)
+                    m = folium.Map(location=[location.latitude, location.longitude], zoom_start=14)
+                    folium.Marker(
+                        location=[location.latitude, location.longitude],
+                        popup=st.session_state.selected_place,
+                        icon=folium.Icon(color='blue',icon='star')
+                    ).add_to(m)
+                    st_folium(m, width=700, height=500)
+
+
+        
 
 
 if __name__ == "__main__":
