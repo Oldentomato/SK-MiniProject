@@ -99,7 +99,8 @@ def getDabangList(search_item, bang_type="원룸/투룸"):
 
         # 매물 리스트 루프
         for index in range(num_elements):
-            print(f"\n--- 매물 {index + 1}/{num_elements} 처리 시작 ---")
+            # 디버깅용
+            # print(f"\n--- 매물 {index + 1}/{num_elements} 처리 시작 ---")
             try:
                 # 매번 목록(ul)과 li를 다시 찾음
                 current_ul = WebDriverWait(driver, wait_timeout).until(

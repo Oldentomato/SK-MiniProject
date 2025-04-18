@@ -24,9 +24,9 @@ def floorFormat(s):
         result = 5
     elif s == "저":
         result = 3 
-    elif "층" in s:
-        return int(s[:-1])
     else:
+        if "층" in s:
+            return int(s.replace("층", ""))
         result = int(s)
 
     return result 
@@ -37,7 +37,7 @@ def korean_money_to_int(s):
         raise Exception("금액 누락")
     if type(s) == int:
         return s
-    s = s.replace(" ", "").replace(",", "").replace("원", "")
+    s = str(s).replace(" ", "").replace(",", "").replace("원", "")
 
     result = 0
     units = {"억": 100000000, "천만": 10000000, "백만": 1000000, "만": 10000, "천": 1000, "백": 100}
