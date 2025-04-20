@@ -176,7 +176,7 @@ def getDabangList(search_item, bang_type="원룸/투룸"):
                                         bang_info["보증금"] = money_info[0]
                                         bang_info["월세"] = money_info[1]
                                 elif bang_info["방식"] == "전세":
-                                    bang_info["전세금"] = price_part[1]
+                                    bang_info["보증금"] = price_part[1]
                                 else: # 매매 등
                                     bang_info["매매금"] = price_part[1]
 
