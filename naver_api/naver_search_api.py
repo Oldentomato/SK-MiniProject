@@ -32,15 +32,21 @@ def searchAddress(name="동국대학교"):
     
     # 요청 성공
     if res.ok:
-        return res.json()['items'][0]['roadAddress']
+        data = res.json()
+        if 'items' in data and len(data['items']) > 0:
+            return data['items'][0]['roadAddress']
+        else:
+            print("No results found.")
+            return None
     # 요청 실패
     else:
         print(f"Error : {res}")
         
 # 디버깅용 메인 함수
 def main():
-    name = "동국대학교"
-    searchAddress(name)
+    name = "울산시 남구 무거동 산 622-15"
+    result = searchAddress(name)
+    print(result)
     
 if __name__ == "__main__":
     main()
