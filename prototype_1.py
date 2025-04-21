@@ -199,6 +199,24 @@ with map_container:
                                 price_parts.append(f"월세: {row['월세']}")
                             if price_parts:
                                 popup_html += f"<b>가격:</b> {' / '.join(price_parts)} 만원<br>"
+                                
+                        # 가격 정보
+                        price_str = "가격 정보 없음"
+
+                        modelResult = getModelResult({
+                            "자치구명": row.get("자치구명"),
+                            "법적동명": row.get("법적동명"),
+                            "층수": row.get("층수"),
+                            "면적": row.get("면적(m²)"),
+                            "보증금": row.get("보증금"),
+                        })
+
+                        if modelResult["success"]:
+                            price_str = modelResult["content"]
+                        else:
+                            price_str = "추론불가 금액"
+
+                        popup_html += f"<b>예상 월세:</b> {price_str}<br>"
 
                         popup_html += f"<b>면적:</b> {row.get('면적(m²)', 'N/A')} m²<br>"
                         popup_html += f"<b>층수:</b> {row.get('층수', 'N/A')}<br>"
@@ -227,46 +245,6 @@ with map_container:
     sf.folium_static(m, width=None, height=500)
 
 # --- 지도 영역 끝 ---
-
-
-
-# --- 정렬 조건 영역 ---
-st.divider()
-st.header("🔍 정렬 조건")
-sort_container = st.container()
-
-with sort_container:
-    sort_col1, sort_col2 = st.columns([3, 1])
-
-    with sort_col1:
-        sort_options = [
-            '기본',
-            '가격 (낮은 순)',
-            '가격 (높은 순)',
-            '면적 (넓은 순)',
-            '면적 (좁은 순)',
-            '관리비 (낮은 순)'
-        ]
-        try:
-            current_sort_index = sort_options.index(st.session_state.sort_criterion)
-        except ValueError:
-            current_sort_index = 0 # Default '기본'
-
-        selected_sort_criterion = st.selectbox(
-            "정렬 기준 선택:",
-            options=sort_options,
-            index=current_sort_index,
-            key="sort_selectbox"
-        )
-
-    with sort_col2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        sort_button_clicked = st.button("정렬 적용")
-
-    # --- 정렬 로직 실행 ---
-
-
-# --- 정렬 조건 끝 ---
 
 
 
