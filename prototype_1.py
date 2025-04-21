@@ -7,6 +7,7 @@ from naver_api import naver_map_api as na
 from module.format_convert import floorFormat
 from module.format_convert import korean_money_to_int
 from naver_api import road_address_convert as ra
+from module.modelInference import getModelResult
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -268,20 +269,32 @@ with results_container:
 
                         # 가격 정보
                         price_str = "가격 정보 없음"
-                        if row.get('방식') == '전세' and row.get('보증금', 0) > 0:
-                            price_str = f"**전세 {int(row['보증금']):,}** 만원"
-                        elif row.get('방식') == '월세':
-                            price_parts = []
-                            if row.get('보증금', 0) > 0:
-                                price_parts.append(f"보증금 {int(row['보증금']):,}만원")
-                            if row.get('월세', 0) > 0:
-                                price_parts.append(f"월세 {int(row['월세']):,}")
-                            if price_parts:
-                                price_str = f"**{' / '.join(price_parts)}** 만원"
-                            else:
-                                price_str = "월세 정보 없음"
+                        # if row.get('방식') == '전세' and row.get('보증금', 0) > 0:
+                        #     price_str = f"**전세 {int(row['보증금']):,}** 만원"
+                        # elif row.get('방식') == '월세':
+                        #     price_parts = []
+                        #     if row.get('보증금', 0) > 0:
+                        #         price_parts.append(f"보증금 {int(row['보증금']):,}만원")
+                        #     if row.get('월세', 0) > 0:
+                        #         price_parts.append(f"월세 {int(row['월세']):,}")
+                        #     if price_parts:
+                        #         price_str = f"**{' / '.join(price_parts)}** 만원"
+                        #     else:
+                        #         price_str = "월세 정보 없음"
+                        modelResult = getModelResult({
+                            "자치구명": row.get("자치구명"),
+                            "법적동명": row.get("법적동명"),
+                            "층수": row.get("층수"),
+                            "면적": row.get("면적(m²)"),
+                            "보증금": row.get("보증금"),
+                        })
 
-                        st.markdown(price_str)
+                        if modelResult["success"]:
+                            price_str = modelResult["content"]
+                        else:
+                            price_str = "추론불가 금액"
+
+                        st.markdown(f"예상 월세: {price_str}")
 
                         st.write(f"📍 **주소:** {row.get('지번주소', '')}")
                         st.write(f"📏 **면적:** {row.get('면적(m²)', 'N/A')} m²")
