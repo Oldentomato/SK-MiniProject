@@ -1,9 +1,13 @@
 import requests
 import os
-from dotenv import load_dotenv
-from . import naver_search_api as na
-# import naver_search_api as na
 import re
+from dotenv import load_dotenv
+
+from . import naver_search_api as na
+from . import road_address_convert as ra
+
+# import naver_search_api as na
+# import road_address_convert as ra
 
 load_dotenv()
 
@@ -15,24 +19,29 @@ def mapXY(input="동국대학교"):
         'X-NCP-APIGW-API-KEY': os.getenv("NAVER_CLOUD_SECRET")
     }
     
-    cleaned_input = input.strip()
+    cleaned_input = str(input).strip()
     
-    # 주소 패턴 정의
-    # 도로명 주소 패턴
-    road_addr_pattern = re.compile(r'\b\S+(?:로|길)\s+\d+(?:-\d+)?\b')
-    # 지번 주소 패턴
-    jibun_addr_pattern = re.compile(r'\b\S+(?:동|리)\s+\d+(?:-\d+)?\b')
-    is_road_address = road_addr_pattern.search(cleaned_input)
-    is_jibun_address = jibun_addr_pattern.search(cleaned_input)
+    # # 주소 패턴 정의
+    # # 도로명 주소 패턴
+    # road_addr_pattern = re.compile(r'\b\S+(?:로|길)\s+\d+(?:-\d+)?\b')
+    # # 지번 주소 패턴
+    # jibun_addr_pattern = re.compile(r'\b\S+(?:동|리)\s+\d+(?:-\d+)?\b')
+    # is_road_address = road_addr_pattern.search(cleaned_input)
+    # is_jibun_address = jibun_addr_pattern.search(cleaned_input)
     
-    # 입력값이 지번주소나 도로명 주소인지 확인
-    if is_road_address:
-        adr = cleaned_input
-    elif is_jibun_address:
-        # "울산시 남구 무거동 산 622-15" 형식일 경우 " 산 " 제거
-        adr = re.sub(r'\s산\s', ' ', cleaned_input, count=1)
-    else:
-        adr = na.searchAddress(input)
+    # # 입력값이 지번주소나 도로명 주소인지 확인
+    # if is_road_address:
+    #     adr = cleaned_input
+    # elif is_jibun_address:
+    #     # 지번주소 형식일 경우 도로명 주소로 변환
+    #     adr = ra.roadAddressConvertor(cleaned_input)
+    #     if adr is None:
+    #         adr = cleaned_input
+    # else:
+    #     adr = na.searchAddress(input)
+    
+    adr = ra.roadAddressConvertor(cleaned_input)
+    print(adr)
     
     # 요청 쿼리
     request_query = {
@@ -72,7 +81,8 @@ def mapXY(input="동국대학교"):
 
 # 디버깅용 메인 함수
 def main():
-    rst = mapXY(input="서울시 중구 필동3가 39-31")
+    rst = mapXY(input="서울특별시 강북구 화계사길 68")
+    print(rst)
     
 if __name__ == "__main__":
     main()

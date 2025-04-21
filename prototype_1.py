@@ -6,6 +6,7 @@ from module import async_getData
 from naver_api import naver_map_api as na
 from module.format_convert import floorFormat
 from module.format_convert import korean_money_to_int
+from naver_api import road_address_convert as ra
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -86,14 +87,18 @@ if submitted:
     st.session_state.lastSearchTerm = st.session_state.searchTerm
 
     # 지도 기준 좌표 가져오기
-    map_info = na.mapXY(input=st.session_state.lastSearchTerm)
+    adr = ra.roadAddressConvertor(st.session_state.lastSearchTerm)
+    if adr is None:
+        st.error(f"'{st.session_state.lastSearchTerm}'✔ 근처에 매물이 없습니다. 올바른 주소를 입력했는지 확인해주세요.")
+        st.stop()
+    map_info = na.mapXY(input=adr)
     st.session_state.map_lat = map_info['위도']
     st.session_state.map_lng = map_info['경도']
 
     # --- 검색 로직 ---
     # 직방, 다방 통합 데이터프레임 가져오기
     if st.session_state.lastSearchTerm:
-        with st.spinner(f"'{st.session_state.lastSearchTerm}' 근처 '{st.session_state.lastSelectedType}' 검색 중..."):
+        with st.spinner(f"'{adr}' 근처 '{st.session_state.lastSelectedType}' 검색 중..."):
             try:
                 # df_results = getData.getCombinedDataFrame(
                 df_results = async_getData.getCombinedDataFrame_threaded(
@@ -122,7 +127,7 @@ if submitted:
 
 # --- 지도 영역 ---
 st.divider()
-st.header("🗺️ 지도 영역")
+st.header("🗺️ 지도")
 map_container = st.container()
 
 with map_container:
@@ -151,80 +156,91 @@ with map_container:
 
         # --- 지도에 마커 추가 ---
         if '지번주소' in df_map.columns:
-            st.write(f"지도에 표시할 매물 {len(df_map)}건의 주소를 좌표로 변환 중...") # Indicate geocoding process
+            with st.spinner(f"지도에 표시할 매물 {len(df_map)}건의 주소를 좌표로 변환 중..."):
+                # geocode 주소로 좌표 변환
+                for i, row in df_map.iterrows():
+                    address = row.get('지번주소')
+                    lat, lng = None, None
 
-            # geocode 주소로 좌표 변환
-            for i, row in df_map.iterrows():
-                address = row.get('지번주소')
-                lat, lng = None, None
+                    if address and isinstance(address, str) and address.strip():
+                        try:
+                            # Naver Geocoding API 호출
+                            geo_info = na.mapXY(input=address)
 
-                if address and isinstance(address, str) and address.strip():
-                    try:
-                        # Naver Geocoding API 호출
-                        geo_info = na.mapXY(input=address)
+                            # 좌표 정보 확인
+                            if geo_info and '위도' in geo_info and '경도' in geo_info:
+                                lat = float(geo_info['위도'])
+                                lng = float(geo_info['경도'])
 
-                        # 좌표 정보 확인
-                        if geo_info and '위도' in geo_info and '경도' in geo_info:
-                            lat = float(geo_info['위도'])
-                            lng = float(geo_info['경도'])
+                            else:
+                                # API 호출 성공했지만 좌표 정보가 없는 경우
+                                st.info(f"주소 '{address}'에 대한 좌표를 찾지 못했습니다.")
 
+                        except Exception as e:
+                            st.warning(f"주소 '{address}' 좌표 검색 중 오류 발생: {e}")
+                            lat, lng = None, None 
+
+                    # --- 매물 마커 생성 ---
+                    # 좌표가 유요한 경우에만
+                    if lat is not None and lng is not None:
+                        popup_html = f"""
+                        <b>{row.get('건물 형식', 'N/A')} / {row.get('방식', 'N/A')}</b> ({row.get('사이트', 'N/A')})<br>
+                        <b>주소:</b> {row.get('지번주소', 'N/A')}<br>
+                        """
+                        # Add price to popup
+                        if row.get('방식') == '전세' and pd.notna(row.get('보증금')):
+                            popup_html += f"<b>가격:</b> 전세 {row['보증금']}만원<br>"
+                        elif row.get('방식') == '월세':
+                            price_parts = []
+                            if pd.notna(row.get('보증금')):
+                                price_parts.append(f"보증금: {row['보증금']}만원")
+                            if pd.notna(row.get('월세')):
+                                price_parts.append(f"월세: {row['월세']}")
+                            if price_parts:
+                                popup_html += f"<b>가격:</b> {' / '.join(price_parts)} 만원<br>"
+
+                        popup_html += f"<b>면적:</b> {row.get('면적(m²)', 'N/A')} m²<br>"
+                        popup_html += f"<b>층수:</b> {row.get('층수', 'N/A')}<br>"
+                        if pd.notna(row.get('관리비')) and int(korean_money_to_int(row.get('관리비', 0))) > 0:
+                            popup_html += f"<b>관리비:</b> {row['관리비']}만원<br>"
                         else:
-                            # API 호출 성공했지만 좌표 정보가 없는 경우
-                            st.info(f"주소 '{address}'에 대한 좌표를 찾지 못했습니다.")
+                            popup_html += f"<b>관리비:</b> 없음<br>"
 
-                    except Exception as e:
-                        st.warning(f"주소 '{address}' 좌표 검색 중 오류 발생: {e}")
-                        lat, lng = None, None 
+                        url = row.get('세부 URL', '')
+                        if url and isinstance(url, str) and url.startswith('http'):
+                            popup_html += f'<a href="{url}" target="_blank">상세 보기</a>'
 
-                # --- 매물 마커 생성 ---
-                # 좌표가 유요한 경우에만
-                if lat is not None and lng is not None:
-                    popup_html = f"""
-                    <b>{row.get('건물 형식', 'N/A')} / {row.get('방식', 'N/A')}</b> ({row.get('사이트', 'N/A')})<br>
-                    <b>주소:</b> {row.get('지번주소', 'N/A')}<br>
-                    """
-                    # Add price to popup
-                    if row.get('방식') == '전세' and pd.notna(row.get('전세금')):
-                        popup_html += f"<b>가격:</b> 전세 {row['전세금']}만원<br>"
-                    elif row.get('방식') == '월세':
-                        price_parts = []
-                        if pd.notna(row.get('보증금')):
-                            price_parts.append(f"보증금: {row['보증금']}만원")
-                        if pd.notna(row.get('월세')):
-                            price_parts.append(f"월세: {row['월세']}")
-                        if price_parts:
-                            popup_html += f"<b>가격:</b> {' / '.join(price_parts)} 만원<br>"
+                        # 툴팁
+                        tooltip_text = f"{row.get('건물 형식', '')} - {row.get('방식', '')}"
 
-                    popup_html += f"<b>면적:</b> {row.get('면적(m²)', 'N/A')} m²<br>"
-                    popup_html += f"<b>층수:</b> {row.get('층수', 'N/A')}<br>"
-                    if pd.notna(row.get('관리비')) and int(korean_money_to_int(row.get('관리비', 0))) > 0:
-                        popup_html += f"<b>관리비:</b> {row['관리비']}만원<br>"
-                    else:
-                        popup_html += f"<b>관리비:</b> 없음<br>"
-
-                    url = row.get('세부 URL', '')
-                    if url and isinstance(url, str) and url.startswith('http'):
-                        popup_html += f'<a href="{url}" target="_blank">상세 보기</a>'
-
-                    # 툴팁
-                    tooltip_text = f"{row.get('건물 형식', '')} - {row.get('방식', '')}"
-
-                    folium.Marker(
-                        location=[lat, lng],
-                        popup=folium.Popup(popup_html, max_width=300),
-                        tooltip=tooltip_text
-                    ).add_to(m)
-            # --- 매물 순회 끝 ---
+                        folium.Marker(
+                            location=[lat, lng],
+                            popup=folium.Popup(popup_html, max_width=300),
+                            tooltip=tooltip_text
+                        ).add_to(m)
+                # --- 매물 순회 끝 ---
 
         else:
             st.warning("검색 결과에 '지번주소' 컬럼이 없어 매물 위치를 지도에 표시할 수 없습니다.")
 
     sf.folium_static(m, width=None, height=500)
 
+# --- 지도 영역 끝 ---
+
+
+
+# --- 정렬 조건 영역 ---
+st.divider()
+st.header("🔍 정렬 조건")
+
+
+# --- 정렬 조건 끝 ---
+
+
 
 # --- 검색 결과 영역 ---
 st.divider()
-st.header("📊 검색 결과 영역")
+st.header("📊 검색 결과")
 results_container = st.container()
 
 with results_container:
@@ -238,7 +254,7 @@ with results_container:
             num_columns = 3
             cols = st.columns(num_columns)
 
-            numeric_cols = ['보증금', '월세', '관리비', '면적(m²)', '전세금']
+            numeric_cols = ['보증금', '월세', '관리비', '면적(m²)']
             for col in numeric_cols:
                 if col in df_display.columns:
                     df_display[col] = pd.to_numeric(df_display[col], errors='coerce').fillna(0)
@@ -252,14 +268,14 @@ with results_container:
 
                         # 가격 정보
                         price_str = "가격 정보 없음"
-                        if row.get('방식') == '전세' and row.get('전세금', 0) > 0:
+                        if row.get('방식') == '전세' and row.get('보증금', 0) > 0:
                             price_str = f"**전세 {int(row['보증금']):,}** 만원"
                         elif row.get('방식') == '월세':
                             price_parts = []
                             if row.get('보증금', 0) > 0:
                                 price_parts.append(f"보증금 {int(row['보증금']):,}만원")
                             if row.get('월세', 0) > 0:
-                                price_parts.append(f"월세 {int(row['월세']):,}만원")
+                                price_parts.append(f"월세 {int(row['월세']):,}")
                             if price_parts:
                                 price_str = f"**{' / '.join(price_parts)}** 만원"
                             else:
