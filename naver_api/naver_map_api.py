@@ -41,7 +41,6 @@ def mapXY(input="동국대학교"):
     #     adr = na.searchAddress(input)
     
     adr = ra.roadAddressConvertor(cleaned_input)
-    print(adr)
     
     # 요청 쿼리
     request_query = {

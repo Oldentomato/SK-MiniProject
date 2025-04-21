@@ -121,7 +121,7 @@ if submitted:
         st.warning("검색어를 입력해주세요.")
         st.session_state.search_results = None
     
-    # -------------------------------------
+# -------------------------------------
 
 
 
@@ -233,6 +233,37 @@ with map_container:
 # --- 정렬 조건 영역 ---
 st.divider()
 st.header("🔍 정렬 조건")
+sort_container = st.container()
+
+with sort_container:
+    sort_col1, sort_col2 = st.columns([3, 1])
+
+    with sort_col1:
+        sort_options = [
+            '기본',
+            '가격 (낮은 순)',
+            '가격 (높은 순)',
+            '면적 (넓은 순)',
+            '면적 (좁은 순)',
+            '관리비 (낮은 순)'
+        ]
+        try:
+            current_sort_index = sort_options.index(st.session_state.sort_criterion)
+        except ValueError:
+            current_sort_index = 0 # Default '기본'
+
+        selected_sort_criterion = st.selectbox(
+            "정렬 기준 선택:",
+            options=sort_options,
+            index=current_sort_index,
+            key="sort_selectbox"
+        )
+
+    with sort_col2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        sort_button_clicked = st.button("정렬 적용")
+
+    # --- 정렬 로직 실행 ---
 
 
 # --- 정렬 조건 끝 ---
@@ -269,18 +300,7 @@ with results_container:
 
                         # 가격 정보
                         price_str = "가격 정보 없음"
-                        # if row.get('방식') == '전세' and row.get('보증금', 0) > 0:
-                        #     price_str = f"**전세 {int(row['보증금']):,}** 만원"
-                        # elif row.get('방식') == '월세':
-                        #     price_parts = []
-                        #     if row.get('보증금', 0) > 0:
-                        #         price_parts.append(f"보증금 {int(row['보증금']):,}만원")
-                        #     if row.get('월세', 0) > 0:
-                        #         price_parts.append(f"월세 {int(row['월세']):,}")
-                        #     if price_parts:
-                        #         price_str = f"**{' / '.join(price_parts)}** 만원"
-                        #     else:
-                        #         price_str = "월세 정보 없음"
+
                         modelResult = getModelResult({
                             "자치구명": row.get("자치구명"),
                             "법적동명": row.get("법적동명"),

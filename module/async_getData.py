@@ -194,12 +194,17 @@ def getCombinedDataFrame_threaded(address, option="원룸/투룸"):
     overall_end_time = time.time()
     print(f"--- 결합 완료 : {overall_end_time - overall_start_time:.2f} 초 소요 ---")
     print(f"최종 결과 길이 : {len(combined_df)}")
+    
+    # "보증금" 컬럼 값 통일 만원 단위로 통일 예) 1억2000 => 12000, 2000 => 2000
+    if '보증금' in combined_df.columns:
+        combined_df['보증금'] = combined_df['보증금'].astype(str).replace('None', '0').str.replace('억', '', regex=False).str.replace(',', '', regex=False).str.replace('만원', '', regex=False).str.replace('원', '', regex=False).str.replace(' ', '', regex=False)
+        combined_df['보증금'] = combined_df['보증금'].astype(float).fillna(0).astype(int)
+    
     return combined_df
 
 
 def main():
-    # Example Usage
-    address_to_search = "충무로역"
+    address_to_search = "동국대학교"
     dabang_option = "원룸/투룸"
 
     combined_dataframe = getCombinedDataFrame_threaded(address_to_search, dabang_option)
@@ -207,6 +212,7 @@ def main():
     if not combined_dataframe.empty:
         # 디버깅용
         print(combined_dataframe.head())
+        combined_dataframe.to_csv("combined_data.csv", index=False, encoding='utf-8')
     else:
         print("\nNo Data or Empty DataFrame")
 

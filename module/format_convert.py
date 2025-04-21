@@ -8,6 +8,8 @@ def floorFormat(s):
         return 5
     elif s == "저":
         return 3 
+    elif s == "반지":
+        return 1
     else:
         if "층" in s:
             return int(s.replace("층", ""))

@@ -55,7 +55,7 @@ def getDabangList(search_item, bang_type="원룸/투룸"):
     if not xy_info or "위도" not in xy_info or "경도" not in xy_info:
         return {"errorMessage": f"'{search_item}'에 대한 위치 정보를 찾을 수 없습니다."}
 
-    query = f"?m_lat={xy_info['위도']}&m_lng={xy_info['경도']}&m_zoom=17"
+    query = f"?m_lat={xy_info['위도']}&m_lng={xy_info['경도']}&m_zoom=18"
     request_url = urljoin(request_url, query)
     print("요청 url : ", request_url)
 
